@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// Start listening for http requests on passed port
 func StartWebServer(port string) {
 
 	log.Println("Starting HTTP service at " + port)
