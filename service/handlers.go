@@ -2,14 +2,27 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/kodywilson/callistaenterprise/dbclient"
+	"github.com/kodywilson/callistaenterprise/model"
 )
 
 var DBClient dbclient.IBoltClient
+
+var client = &http.Client{}
+
+func init() {
+	var transport http.RoundTripper = &http.Transport{
+		DisableKeepAlives: true,
+	}
+	client.Transport = transport
+}
 
 func GetAccount(w http.ResponseWriter, r *http.Request) {
 
@@ -18,6 +31,13 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Read the account struct BoltDB
 	account, err := DBClient.QueryAccount(accountId)
+
+	account.ServedBy = getIP()
+
+	quote, err := getQuote()
+	if err == nil {
+		account.Quote = quote
+	}
 
 	// If err, return a 404
 	if err != nil {
@@ -31,6 +51,20 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(data)
+}
+
+func getQuote() (model.Quote, error) {
+	req, _ := http.NewRequest("GET", "http://quotes-service:8080/api/quote?strength=4", nil)
+	resp, err := client.Do(req)
+
+	if err == nil && resp.StatusCode == 200 {
+		quote := model.Quote{}
+		bytes, _ := ioutil.ReadAll(resp.Body)
+		json.Unmarshal(bytes, &quote)
+		return quote, nil
+	} else {
+		return model.Quote{}, fmt.Errorf("Some error")
+	}
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
@@ -54,4 +88,20 @@ func writeJsonResponse(w http.ResponseWriter, status int, data []byte) {
 
 type healthCheckResponse struct {
 	Status string `json:"status"`
+}
+
+func getIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "error"
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	panic("Unable to determine local IP address (non loopback). Exiting.")
 }
