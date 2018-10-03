@@ -13,6 +13,7 @@
 
 # Docker images
 accountservice-linux-amd64
+healthchecker-linux-amd64
 
 # Ignore the database
 *.db
