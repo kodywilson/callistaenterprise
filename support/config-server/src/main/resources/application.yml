@@ -37,7 +37,7 @@ encrypt:
     password: letmein
     alias: goblogkey
     secret: changeme
-
+    
 eureka:
   client:
     enabled: false
