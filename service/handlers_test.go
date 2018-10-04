@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/h2non/gock"
 	"github.com/kodywilson/callistaenterprise/dbclient"
 	"github.com/kodywilson/callistaenterprise/model"
 	. "github.com/smartystreets/goconvey/convey"
@@ -27,7 +28,17 @@ func TestGetAccountWrongPath(t *testing.T) {
 	})
 }
 
+func init() {
+	gock.InterceptClient(client)
+}
+
 func TestGetAccount(t *testing.T) {
+	defer gock.Off()
+	gock.New("http://quotes-service:8080").
+		Get("/api/quote").
+		MatchParam("strength", "4").
+		Reply(200).
+		BodyString(`{"quote":"May the source be with you. Always.","ipAddress":"10.0.0.5:8080","language":"en"}`)
 	// Create a mock instance that implements the IBoltClient interface
 	mockRepo := &dbclient.MockBoltClient{}
 
@@ -52,6 +63,7 @@ func TestGetAccount(t *testing.T) {
 				json.Unmarshal(resp.Body.Bytes(), &account)
 				So(account.Id, ShouldEqual, "123")
 				So(account.Name, ShouldEqual, "Person_123")
+				So(account.Quote.Text, ShouldEqual, "May the source be with you. Always.")
 			})
 		})
 	})

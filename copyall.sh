@@ -13,4 +13,4 @@ cp healthchecker/healthchecker-linux-amd64 .
 docker build -t kodywilson/accountservice .
 
 docker service rm accountservice
-docker service create --name=accountservice --replicas=1 -p=6767:6767 kodywilson/accountservice
+docker service create --name=accountservice --replicas=1 --network=my_network -p=6767:6767 kodywilson/accountservice
